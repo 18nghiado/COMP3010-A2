@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Discordn't Chat</title>
+    <script>
+        let username = null;
+
+        function login() {
+            username = document.getElementById("usernameInput").value;
+            if (username) {
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", "http://130.179.28.114:8080/api/login");
+                xhr.withCredentials = true;  // Ensure cookies are set
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        document.getElementById("loginSection").style.display = "none";
+                        document.getElementById("chatSection").style.display = "block";
+                        fetchMessages();
+                    } else {
+                        console.log("Login failed:", xhr.status, xhr.responseText);
+                    }
+                };
+                xhr.onerror = function() {
+                    console.log("Request failed");
+                };
+                xhr.send(JSON.stringify({ username: username }));  // Send username in JSON format
+            }
+        }
+
+        function logout() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("DELETE", "http://130.179.28.114:8080/api/login");
+            xhr.withCredentials = true;
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    username = null;
+                    document.cookie = "username=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    document.getElementById("loginSection").style.display = "block";
+                    document.getElementById("chatSection").style.display = "none";
+                } else {
+                    console.log("Logout failed:", xhr.status, xhr.responseText);
+                }
+            };
+            xhr.onerror = function() {
+                console.log("Request failed");
+            };
+            xhr.send();
+        }
+
+
+        function fetchMessages() {
+            if (!username) return;
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "http://130.179.28.114:8080/api/messages");
+            xhr.withCredentials = true; 
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    let response = JSON.parse(xhr.responseText);
+                    let messages = response.messages;
+                    const chatBox = document.getElementById("chatBox");
+                    chatBox.innerHTML = messages.map(msg => `<p><b>${msg.username}:</b> ${msg.text}</p>`).join("");
+                } else {
+                    console.log("Error fetching messages:", xhr.status, xhr.responseText);
+                }
+            };
+            xhr.onerror = function() {
+                console.log("Request failed");
+            };
+            xhr.send();
+        }
+
+        function sendMessage() {
+            const message = document.getElementById("messageInput").value;
+            if (message && username) {
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", "http://130.179.28.114:8080/api/messages");
+                xhr.withCredentials = true;
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        document.getElementById("messageInput").value = "";
+                        fetchMessages();
+                    } else {
+                        console.log("Error:", xhr.status, xhr.responseText);
+                    }
+                };
+                xhr.onerror = function() {
+                    console.log("Request failed");
+                };
+                xhr.send(JSON.stringify({ username: username, text: message }));
+            }
+        }
+
+        function setup() {
+            document.getElementById("loginBtn").onclick = login;
+            document.getElementById("sendBtn").onclick = sendMessage;
+            document.getElementById("logoutBtn").onclick = logout;
+            setInterval(fetchMessages, 5000);  // Poll every 5 seconds
+        }
+    </script>
+</head>
+<body onload="setup()">
+    <div id="loginSection">
+        <h2>Welcome to Discordn't</h2>
+        <input type="text" id="usernameInput" placeholder="Enter your username">
+        <button id="loginBtn">Login</button>
+    </div>
+
+    <div id="chatSection" style="display: none;">
+        <div id="chatBox" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;">
+            <!-- Messages will populate here -->
+        </div>
+        <input type="text" id="messageInput" placeholder="Type a message">
+        <button id="sendBtn">Send</button>
+        <button id="logoutBtn">Logout</button>
+
+    </div>
+</body>
+</html>
