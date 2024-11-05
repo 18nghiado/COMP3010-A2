@@ -4,8 +4,27 @@
     <meta charset="UTF-8">
     <title>Discordn't Chat</title>
     <script>
-        const serverUrl = "http://130.179.28.122:8080";
+        const serverUrl = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
         let username = null;
+        let lastMessageTimeStamp = Date.now();
+        
+        function getCookie(name) {
+            const cookies = document.cookie.split("; ");
+            for (let cookie of cookies) {
+                const [key, value] = cookie.split("=");
+                if (key === name) return value;
+            }
+            return null;
+        }
+
+        function checkLogin() {
+            username = getCookie("username");
+            if (username || localStorage.getItem("isLoggedIn") === "true") {
+                document.getElementById("loginSection").style.display = "none";
+                document.getElementById("chatSection").style.display = "block";
+                fetchMessages();
+            }
+        }
 
         function login() {
             username = document.getElementById("usernameInput").value;
@@ -16,6 +35,8 @@
                 xhr.setRequestHeader("Content-Type", "application/json");
                 xhr.onload = function() {
                     if (xhr.status === 200) {
+                        document.cookie = `username=${username}; path=/; SameSite=Strict;`;
+                        localStorage.setItem("isLoggedIn", "true");
                         document.getElementById("loginSection").style.display = "none";
                         document.getElementById("chatSection").style.display = "block";
                         fetchMessages();
@@ -38,6 +59,7 @@
                 if (xhr.status === 200) {
                     username = null;
                     document.cookie = "username=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    localStorage.removeItem("isLoggedIn");
                     document.getElementById("loginSection").style.display = "block";
                     document.getElementById("chatSection").style.display = "none";
                 } else {
@@ -52,16 +74,26 @@
 
 
         function fetchMessages() {
-            //if (!username) return;
+            //if (!username) return;               //uncomment this out will make it so that there wont be any polling while not logged in
+            const url = lastMessageTimeStamp ? `${serverUrl}/api/messages?last=${lastMessageTimeStamp}` : `${serverUrl}/api/messages`;
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", `${serverUrl}/api/messages`);
+            
+            xhr.open("GET", url);
             xhr.withCredentials = true; 
             xhr.onload = function() {
                 if (xhr.status === 200) {
                     let response = JSON.parse(xhr.responseText);
                     let messages = response.messages;
-                    const chatBox = document.getElementById("chatBox");
-                    chatBox.innerHTML = messages.map(msg => `<p><b>${msg.username}:</b> ${msg.text}</p>`).join("");
+                    console.log("Full response:", response);
+                    if (messages && messages.length > 0) {
+                        // Ensure messages have an ID field
+                        lastMessageTimeStamp = Date.now();
+                        const chatBox = document.getElementById("chatBox");
+                        chatBox.innerHTML = messages.map(msg => `<p><b>${msg.username}:</b> ${msg.text}</p>`).join("");
+                    } else {
+                        console.log("No new messages found.");
+                    }
+                    
                 } else {
                     console.log("Error fetching messages:", xhr.status, xhr.responseText);
                 }
@@ -98,7 +130,8 @@
             document.getElementById("loginBtn").onclick = login;
             document.getElementById("sendBtn").onclick = sendMessage;
             document.getElementById("logoutBtn").onclick = logout;
-            setInterval(fetchMessages, 5000);  // Poll every 5 seconds
+            checkLogin();
+            setInterval(fetchMessages, 5000);  // Poll every 5 seconds, we can change this to sth else but depends
         }
     </script>
 </head>

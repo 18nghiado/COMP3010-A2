@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-HOST, PORT = '130.179.28.122', 8080
+HOST, PORT_WEB, PORT_CHAT = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
 
 class WebServer:
     def __init__(self, host, port):
@@ -49,10 +49,10 @@ class WebServer:
                         elif method == "GET" and path.startswith("/api/messages"):
                             self.get_messages(client_socket, path)
                         elif method == "POST" and path == "/api/messages":
-                            self.create_message(client_socket, headers, request)
+                            self.create_message(client_socket, request)
                         elif method == "POST" and path == "/api/login":
                             request_body = request.split("\r\n\r\n")[1] if "\r\n\r\n" in request else ""
-                            self.login(client_socket, headers, request_body)
+                            self.login(client_socket, request_body)
                         elif method == "DELETE" and path == "/api/login":
                             self.logout(client_socket)
                         else:
@@ -87,7 +87,6 @@ class WebServer:
             # Get the file size without reading the file content
             file_size = os.path.getsize(file_path)
             
-            # Send the response headers
             response = (
                 "HTTP/1.1 200 OK\r\n"
                 f"Content-Type: {content_type}\r\n"
@@ -97,7 +96,6 @@ class WebServer:
             )
             client_socket.sendall(response.encode('utf-8'))
             
-            # Open the file in binary mode and stream it to the client
             with open(file_path, 'rb') as file:
                 while chunk := file.read(4096):  
                     client_socket.sendall(chunk)
@@ -114,13 +112,19 @@ class WebServer:
         
         client_socket.close()
 
+    # The main html page frontend.html
     def serve_html(self, client_socket):
         if os.path.exists("frontend.html"):
             with open("frontend.html", "r") as file:
                 content = file.read()
             server_url = f"http://{self.host}:{self.port}"
             content = content.replace("__SERVER_URL__", server_url)
-            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" + content
+            content_length = len(content)
+            response_headers = ("HTTP/1.1 200 OK\r\n"
+                    f"Content-Length: {content_length}\r\n"
+                    "Content-Type: text/html\r\n\r\n" 
+            )
+            client_socket.sendall(response_headers.encode() + content.encode())
         else:
             response = "HTTP/1.1 404 Not Found\r\n\r\nFile not found."
         client_socket.sendall(response.encode())
@@ -153,7 +157,7 @@ class WebServer:
         else:
             self.send_404(client_socket)
 
-    def create_message(self, client_socket, headers, request):
+    def create_message(self, client_socket, request):
         body = request.split("\r\n\r\n")[1]
         data = json.loads(body)
         message_request = json.dumps(data)
@@ -164,10 +168,10 @@ class WebServer:
         else:
             self.send_404(client_socket)
 
-    def login(self, client_socket, headers, request_body):
+    def login(self, client_socket, request_body):
         try:
             data = json.loads(request_body)
-            username = data.get("username", "guest")  # Default to "guest" if no username is provided
+            username = data.get("username")  
         except json.JSONDecodeError:
             self.send_400(client_socket)
             return
@@ -187,7 +191,7 @@ class WebServer:
     def forward_to_chat_server(self, data):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as chat_socket:
-                chat_socket.connect(('130.179.28.122', 9090))
+                chat_socket.connect((HOST, PORT_CHAT))
                 chat_socket.sendall(data.encode())
                 response = chat_socket.recv(4096).decode()
                 return response
@@ -215,13 +219,9 @@ class WebServer:
 
 
 if __name__ == "__main__":
-    # Ensure host and port are provided as command-line arguments
-    if len(sys.argv) != 3:
-        print("Usage: python3 web_server.py <host> <port>")
+    if len(sys.argv) != 4:
+        print("Usage: python3 web_server.py <host> <port_web> <port_chat>")
         sys.exit(1)
 
-    host = sys.argv[1]
-    port = int(sys.argv[2])
-
-    server = WebServer(host, port)
+    server = WebServer(HOST, PORT_WEB)
     server.start()

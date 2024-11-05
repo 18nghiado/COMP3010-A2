@@ -3,12 +3,14 @@ import select
 import sys
 
 def run_client():
-    if len(sys.argv) != 2:
-        print("Usage: python3 client.py <username>")
+    if len(sys.argv) != 4:
+        print("Usage: python3 client.py <username> <host> <port>")
         return
     
-    username = sys.argv[1]  
-    server_address = ('130.179.28.122', 9090)  
+    username = sys.argv[1] 
+    HOST = sys.argv[2]
+    PORT = int(sys.argv[3]) 
+    server_address = (HOST, PORT)  
     
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -25,7 +27,6 @@ def run_client():
                 
                 for sock in readable:
                     if sock == client_socket:
-                        # Incoming message from server
                         message = client_socket.recv(1024).decode('utf-8')
                         if message:
                             if "Connection refused" in message:
@@ -35,7 +36,6 @@ def run_client():
                                 
                             sys.stdout.write(f"\r{message}\n> ")  
                     else:
-                        # User input
                         message = input("> ")
                         if message.lower() == "exit":
                             client_socket.sendall(f"{username} has left the chat.".encode('utf-8'))
