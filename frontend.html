@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <title>Discordn't Chat</title>
     <script>
+        const serverUrl = "http://130.179.28.122:8080";
         let username = null;
 
         function login() {
             username = document.getElementById("usernameInput").value;
             if (username) {
                 const xhr = new XMLHttpRequest();
-                xhr.open("POST", "http://130.179.28.114:8080/api/login");
-                xhr.withCredentials = true;  // Ensure cookies are set
+                xhr.open("POST", `${serverUrl}/api/login`);
+                xhr.withCredentials = true;  
                 xhr.setRequestHeader("Content-Type", "application/json");
                 xhr.onload = function() {
                     if (xhr.status === 200) {
@@ -25,13 +26,13 @@
                 xhr.onerror = function() {
                     console.log("Request failed");
                 };
-                xhr.send(JSON.stringify({ username: username }));  // Send username in JSON format
+                xhr.send(JSON.stringify({ username: username }));  
             }
         }
 
         function logout() {
             const xhr = new XMLHttpRequest();
-            xhr.open("DELETE", "http://130.179.28.114:8080/api/login");
+            xhr.open("DELETE", `${serverUrl}/api/login`);
             xhr.withCredentials = true;
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -51,9 +52,9 @@
 
 
         function fetchMessages() {
-            if (!username) return;
+            //if (!username) return;
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", "http://130.179.28.114:8080/api/messages");
+            xhr.open("GET", `${serverUrl}/api/messages`);
             xhr.withCredentials = true; 
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -75,7 +76,7 @@
             const message = document.getElementById("messageInput").value;
             if (message && username) {
                 const xhr = new XMLHttpRequest();
-                xhr.open("POST", "http://130.179.28.114:8080/api/messages");
+                xhr.open("POST", `${serverUrl}/api/messages`);
                 xhr.withCredentials = true;
                 xhr.setRequestHeader("Content-Type", "application/json");
                 xhr.onload = function() {
@@ -110,7 +111,6 @@
 
     <div id="chatSection" style="display: none;">
         <div id="chatBox" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;">
-            <!-- Messages will populate here -->
         </div>
         <input type="text" id="messageInput" placeholder="Type a message">
         <button id="sendBtn">Send</button>

@@ -2,9 +2,8 @@ import socket
 import select
 import json
 import os
+import sys
 
-HOST = '130.179.28.114'
-PORT = 9090
 CHAT_HISTORY_FILE = 'chat_history.txt'
 MAX_HISTORY = 100
 
@@ -12,34 +11,29 @@ clients = {}
 inputs = []
 
 def save_message_to_file(message):
-    """Save message to file for history."""
     with open(CHAT_HISTORY_FILE, 'a') as file:
         file.write(message + '\n')
 
 def load_recent_messages():
-    """Load recent chat history from file."""
     if os.path.exists(CHAT_HISTORY_FILE):
         with open(CHAT_HISTORY_FILE, 'r') as file:
             return file.readlines()[-MAX_HISTORY:]
     return []
 
 def send_message(client_socket, message):
-    """Send a message to a client socket."""
     try:
         client_socket.sendall(message.encode('utf-8'))
     except Exception as e:
         print(f"Error sending message: {e}")
 
 def broadcast_message(message, exclude_socket=None):
-    """Broadcast a message to all clients except the excluded socket."""
     for client_socket in clients.values():
         if client_socket != exclude_socket:
             send_message(client_socket, message)
 
 def handle_new_connection(server_socket):
-    """Handle a new client connection."""
     client_socket, client_address = server_socket.accept()
-    print(f"New connection from {client_address}")
+
     try:
         username = client_socket.recv(1024).decode('utf-8').strip()
         if username.startswith('{'):
@@ -66,7 +60,6 @@ def handle_new_connection(server_socket):
         print(f"Error handling new connection: {e}")
 
 def handle_client_message(client_socket):
-    """Handle messages from a connected client."""
     try:
         message = client_socket.recv(1024).decode('utf-8')
         if message:
@@ -81,7 +74,6 @@ def handle_client_message(client_socket):
         handle_disconnect(client_socket)
 
 def handle_disconnect(client_socket):
-    """Handle a client disconnecting."""
     for username, sock in clients.items():
         if sock == client_socket:
             print(f"{username} has left the chat.")
@@ -92,7 +84,6 @@ def handle_disconnect(client_socket):
             break
 
 def handle_web_request(client_socket, request):
-    """Handle incoming requests from the web server."""
     try:
         data = json.loads(request)
         
@@ -118,13 +109,13 @@ def handle_web_request(client_socket, request):
         client_socket.close()
 
 
-def main():
+def main(host, port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((HOST, PORT))
+    server_socket.bind((host, port))
     server_socket.listen(5)
     inputs.append(server_socket)
     
-    print(f"Chat server started on port {PORT}. Waiting for connections...")
+    print(f"Chat server started on {host}:{port}. Waiting for connections...")
     
     while True:
         readable, _, _ = select.select(inputs, [], [])
@@ -136,4 +127,12 @@ def main():
                 handle_client_message(s)
 
 if __name__ == "__main__":
-    main()
+    # Ensure host and port are provided as command-line arguments
+    if len(sys.argv) != 3:
+        print("Usage: python3 server_modified.py <host> <port>")
+        sys.exit(1)
+
+    host = sys.argv[1]
+    port = int(sys.argv[2])
+
+    main(host, port)
