@@ -13,7 +13,7 @@ class WebServer:
 
     def start(self):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind((self.host, self.port))
+        server_socket.bind(('', self.port))
         server_socket.listen(5)
         print(f"Web server running on {self.host}:{self.port}...")
         
@@ -117,8 +117,6 @@ class WebServer:
         if os.path.exists("frontend.html"):
             with open("frontend.html", "r") as file:
                 content = file.read()
-            server_url = f"http://{self.host}:{self.port}"
-            content = content.replace("__SERVER_URL__", server_url)
             content_length = len(content)
             response_headers = ("HTTP/1.1 200 OK\r\n"
                     f"Content-Length: {content_length}\r\n"

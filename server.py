@@ -111,7 +111,7 @@ def handle_web_request(client_socket, request):
 
 def main(host, port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
+    server_socket.bind(('', port))
     server_socket.listen(5)
     inputs.append(server_socket)
     

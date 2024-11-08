@@ -6,7 +6,7 @@
     <script>
         const serverUrl = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
         let username = null;
-        let lastMessageTimeStamp = Date.now();
+        let lastMessageTimeStamp = 0;
         
         function getCookie(name) {
             const cookies = document.cookie.split("; ");

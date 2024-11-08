@@ -1,59 +1,57 @@
-import sys
-import select
-import termios
 import socket
+import select
+import sys
 
-# Echo client program
+def run_client():
+    if len(sys.argv) != 4:
+        print("Usage: python3 client.py <username> <host> <port>")
+        return
+    
+    username = sys.argv[1] 
+    HOST = sys.argv[2]
+    PORT = int(sys.argv[3]) 
+    server_address = (HOST, PORT)  
+    
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        client_socket.connect(server_address)
+        client_socket.sendall(username.encode('utf-8'))
 
-try:
-    name = sys.argv[1]
-    server = sys.argv[2]
-    port = int(sys.argv[3])
-except:
-    print("Usage: python filename.py myusername server port")
-    sys.exit(1)
+        print(f"Connected to server as {username}.")
+        
+        while True:
+            try:
+                sockets_list = [sys.stdin, client_socket]
+                
+                readable, writable, exceptional = select.select(sockets_list, [], [])
+                
+                for sock in readable:
+                    if sock == client_socket:
+                        message = client_socket.recv(1024).decode('utf-8')
+                        if message:
+                            if "Connection refused" in message:
+                                print(message)
+                                client_socket.close()
+                                return
+                                
+                            sys.stdout.write(f"\r{message}\n> ")  
+                    else:
+                        message = input("> ")
+                        if message.lower() == "exit":
+                            client_socket.sendall(f"{username} has left the chat.".encode('utf-8'))
+                            client_socket.close()
+                            print("Disconnected from server.")
+                            return
+                        else:
+                            client_socket.sendall(f"{username}: {message}".encode('utf-8'))
+            except KeyboardInterrupt:
+                print("\nClient closed.")
+                client_socket.close()
+                return
+    except ConnectionRefusedError as e:
+        print(f"Unable to connect to server: {e}")
+        return
 
-term_height = 23
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((server, port))
-sock.setblocking(0)
-
-# Canonical mode is "get input when enter is pressed"
-# I want to read characters immediately!
-fd = sys.stdin.fileno()
-newattr = termios.tcgetattr(fd)
-newattr[3] = newattr[3] & ~termios.ICANON
-newattr[3] = newattr[3] & ~termios.ECHO
-termios.tcsetattr(fd, termios.TCSANOW, newattr)
-
-buildStr = ""
-prev_chats = ["\n"] * term_height
-
-while True:
-    readable, writable, exceptional = select.select([sock, sys.stdin], [], [sock, sys.stdin])
-
-    for r in readable:
-        if r is sock:
-            text = sock.recv(1024)
-            if len(text) == 0:
-                print("Goodbye")
-                sys.exit(0)
-            # read it, print it
-            del prev_chats[0]
-            prev_chats.append(text.decode('utf-8'))
-            for c in prev_chats:
-                print(c.strip())
-            print(">> " + buildStr, end="", flush=True)
-        else:
-            # We have stdin, echo it, save it
-            theChar = sys.stdin.read(1)
-            print(theChar, end="", flush=True)
-            buildStr = buildStr + theChar
-            if theChar == "\n":
-                buildStr = name + ": " + buildStr
-                sock.send(buildStr.encode())
-                buildStr = ""
-
-    for e in exceptional:
-        print(e)
+if __name__ == "__main__":
+    run_client()

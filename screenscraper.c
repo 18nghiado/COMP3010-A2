@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
     receive_response(sock, response);
     close(sock);
 
+    printf("Messages before posting:\n%s\n", response); 
     
     assert(strstr(response, "200 OK") != NULL); // Ensures the GET request is successful
     // Verify the message isn't present initially
@@ -95,6 +96,8 @@ int main(int argc, char *argv[]) {
     receive_response(sock, response);
     close(sock);
 
+    printf("Response after posting message:\n%s\n", response);
+
     assert(strstr(response, "200 OK") != NULL); // Ensures the POST request is successful
 
     // Step 3: Verify the message is now in the server's response (GET request)
@@ -102,6 +105,8 @@ int main(int argc, char *argv[]) {
     send_request(sock, get_request);
     receive_response(sock, response);
     close(sock);
+
+    printf("Messages after posting:\n%s\n", response);
 
     assert(strstr(response, "200 OK") != NULL); // Ensures the GET request is successful
     // Assert that the message now exists in the response
@@ -116,6 +121,8 @@ int main(int argc, char *argv[]) {
     send_request(sock, unauth_request);
     receive_response(sock, response);
     close(sock);
+
+    printf("Response to unauthorized request:\n%s\n", response);
 
     assert(strstr(response, "401 Unauthorized") != NULL); // Checks for proper unauthorized access response
     assert(strstr(response, "Unauthorized access") != NULL);
